@@ -2,7 +2,7 @@ from flask import Flask, request
 from openai import OpenAI
 import os
 from reminders import add_reminder  # 👈 Hatırlatıcıyı içe aktar
-
+from reminders import add_reminder, list_reminders_for_user  # 👈 Listeleme fonksiyonu da dahil
 from datetime import datetime
 import dateparser  # Doğal dilde tarih/saat çözümleyici
 
