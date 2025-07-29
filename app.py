@@ -49,15 +49,19 @@ def whatsapp_webhook():
         return respond(f"Bir hata oluştu:\n{str(e)}")
 
 @app.route("/check", methods=["GET"])
-def check_reminders():
-    due = get_due_reminders()
-    for r in due:
-        twilio_client.messages.create(
-            body=f"🔔 Hatırlatma: {r['message']}",
-            from_=TWILIO_FROM,
-            to=r["phone"]
-        )
-    return "Kontrol tamamlandı", 200
+def check_reminders_route():  # 💡 Fonksiyon adı benzersiz olmalı
+    due_reminders = get_due_reminders(grace_minutes=5)
+    for r in due_reminders:
+        print(f"[HATIRLATICI] {r['phone']} için: {r['message']}")
+        try:
+            twilio_client.messages.create(
+                body=f"🔔 Hatırlatma: {r['message']}",
+                from_=TWILIO_FROM,
+                to=r["phone"]
+            )
+        except Exception as e:
+            print(f"Twilio gönderim hatası: {e}")
+    return {"status": "ok", "count": len(due_reminders)}, 200
 
 def respond(message):
     return f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -67,13 +71,3 @@ def respond(message):
 
 if __name__ == "__main__":
     app.run()
-from reminders import get_due_reminders  # 👈 bunu en üste ekle
-
-@app.route("/check", methods=["GET"])
-def check_reminders():
-    due_reminders = get_due_reminders(grace_minutes=5)
-    for r in due_reminders:
-        print(f"[HATIRLATICI] {r['phone']} için: {r['message']}")
-        # Burada Twilio ile WhatsApp mesajı da gönderebilirsin
-        # send_whatsapp_message(r["phone"], r["message"])
-    return {"status": "ok", "count": len(due_reminders)}
