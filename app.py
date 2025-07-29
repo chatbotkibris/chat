@@ -67,3 +67,13 @@ def respond(message):
 
 if __name__ == "__main__":
     app.run()
+from reminders import get_due_reminders  # 👈 bunu en üste ekle
+
+@app.route("/check", methods=["GET"])
+def check_reminders():
+    due_reminders = get_due_reminders(grace_minutes=5)
+    for r in due_reminders:
+        print(f"[HATIRLATICI] {r['phone']} için: {r['message']}")
+        # Burada Twilio ile WhatsApp mesajı da gönderebilirsin
+        # send_whatsapp_message(r["phone"], r["message"])
+    return {"status": "ok", "count": len(due_reminders)}
