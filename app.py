@@ -1,10 +1,9 @@
 from flask import Flask, request
 from openai import OpenAI
 import os
-from reminders import add_reminder  # 👈 Hatırlatıcıyı içe aktar
-from reminders import add_reminder, list_reminders_for_user  # 👈 Listeleme fonksiyonu da dahil
+from reminders import add_reminder, list_reminders_for_user
 from datetime import datetime
-import dateparser  # Doğal dilde tarih/saat çözümleyici
+import dateparser
 
 app = Flask(__name__)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -14,10 +13,15 @@ def whatsapp_webhook():
     incoming_msg = request.values.get("Body", "").strip()
     sender = request.values.get("From", "")
 
+    # Kullanıcının adını sorma
     if "adım ne" in incoming_msg.lower():
         return respond("Sen Koray'sın :)")
 
-    # 🧠 ChatGPT ile cevap al
+    # Hatırlatmaları listeleme
+    if "listele" in incoming_msg.lower():
+        return respond(list_reminders_for_user(sender))
+
+    # 🧠 ChatGPT ile yanıt oluşturma
     try:
         response = client.chat.completions.create(
             model="gpt-4",
@@ -25,7 +29,7 @@ def whatsapp_webhook():
         )
         reply = response.choices[0].message.content.strip()
 
-        # 📅 Mesajda tarih/saat var mı kontrol et
+        # 📅 Doğal dilden tarih algıla ve hatırlatıcı olarak kaydet
         dt = dateparser.parse(incoming_msg, languages=["tr"])
         if dt and dt > datetime.now():
             add_reminder(
