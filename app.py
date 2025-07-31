@@ -14,6 +14,8 @@ TWILIO_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_FROM = os.getenv("TWILIO_PHONE")
 twilio_client = Client(TWILIO_SID, TWILIO_TOKEN)
 
+print("reminders.json exists:", os.path.exists("reminders.json"))
+
 @app.route("/webhook", methods=["POST"])
 def whatsapp_webhook():
     incoming_msg = request.values.get("Body", "").strip()
