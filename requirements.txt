@@ -3,3 +3,4 @@ openai>=1.2.3
 gunicorn
 dateparser
 twilio
+tinydb
