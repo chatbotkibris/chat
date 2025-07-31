@@ -31,6 +31,11 @@ def add_reminder(phone_number, time_str, message, original_text):
     })
 
     print("[DEBUG] reminders_db.json kaydedildi.")
+    from pathlib import Path
+from tinydb import TinyDB, Query
+
+db_path = Path(__file__).resolve().parent / "reminders_db.json"
+db = TinyDB(str(db_path))
 
 
 def list_reminders_for_user(phone_number):
@@ -67,5 +72,5 @@ def get_due_reminders(grace_minutes=5):
     # Eski hatırlatmaları temizle, kalanları sakla
     db.truncate()
     db.insert_multiple(remaining)
-
+    
     return due
