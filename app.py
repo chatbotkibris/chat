@@ -10,6 +10,7 @@ from twilio.rest import Client
 app = Flask(__name__)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# Twilio bilgileri
 TWILIO_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_FROM = os.getenv("TWILIO_PHONE")
@@ -20,13 +21,15 @@ def whatsapp_webhook():
     incoming_msg = request.values.get("Body", "").strip()
     sender = request.values.get("From", "")
 
+    # Adını hatırlama
     if "adım ne" in incoming_msg.lower():
         return respond("Sen Koray'sın :)")
 
+    # Hatırlatıcıları listele
     if "listele" in incoming_msg.lower():
         return respond(list_reminders_for_user(sender))
 
-    # Tarih varsa hatırlatıcı kur
+    # Tarih algılama ve hatırlatıcı ekleme
     dt = dateparser.parse(
         incoming_msg,
         settings={'TIMEZONE': 'UTC', 'RETURN_AS_TIMEZONE_AWARE': True},
@@ -43,7 +46,7 @@ def whatsapp_webhook():
         )
         return respond(f"✅ Hatırlatıcı kuruldu: {readable_time}")
 
-    # 🧠 Hafızalı GPT cevabı
+    # GPT-4 ile konuşma geçmişi üzerinden yanıt üret
     try:
         conversation = get_conversation(sender)
         conversation.append({"role": "user", "content": incoming_msg})
@@ -54,6 +57,7 @@ def whatsapp_webhook():
         )
         reply = response.choices[0].message.content.strip()
 
+        # Konuşma geçmişine kaydet
         save_message(sender, "user", incoming_msg)
         save_message(sender, "assistant", reply)
 
@@ -62,6 +66,7 @@ def whatsapp_webhook():
     except Exception as e:
         return respond(f"Hata oluştu:\n{str(e)}")
 
+# Hatırlatıcı kontrol endpoint'i
 @app.route("/check", methods=["GET"])
 def check_reminders():
     due_reminders = get_due_reminders(grace_minutes=5)
@@ -73,6 +78,7 @@ def check_reminders():
         )
     return {"status": "ok", "count": len(due_reminders)}, 200
 
+# Twilio XML dönüşü
 def respond(message):
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
