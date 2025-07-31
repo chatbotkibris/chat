@@ -80,3 +80,6 @@ def respond(message):
 <Response>
     <Message>{message}</Message>
 </Response>""", 200, {"Content-Type": "application/xml"}
+@app.route("/", methods=["GET"])
+def index():
+    return "Chatbot is running ✅"
