@@ -17,7 +17,7 @@ twilio_client = Client(TWILIO_SID, TWILIO_TOKEN)
 @app.route("/webhook", methods=["POST"])
 def whatsapp_webhook():
     incoming_msg = request.values.get("Body", "").strip()
-    sender = request.values.get("From", "")
+    sender = request.values.get("From", "").replace("whatsapp:", "")  # Twilio'dan gelen veri
 
     if "adım ne" in incoming_msg.lower():
         return respond("Sen Koray'sın :)")
@@ -25,6 +25,7 @@ def whatsapp_webhook():
     if "listele" in incoming_msg.lower():
         return respond(list_reminders_for_user(sender))
 
+    # Doğal dil tarih çözümlemesi
     dt = dateparser.parse(
         incoming_msg,
         settings={'TIMEZONE': 'UTC', 'RETURN_AS_TIMEZONE_AWARE': True},
@@ -41,7 +42,7 @@ def whatsapp_webhook():
         )
         return respond(f"✅ Hatırlatıcı kuruldu: {readable_time}")
 
-    # Tarih çıkarılamazsa GPT yanıtı
+    # Tarih çıkmazsa GPT yanıtı
     try:
         response = client.chat.completions.create(
             model="gpt-4",
@@ -51,18 +52,25 @@ def whatsapp_webhook():
         return respond(reply)
 
     except Exception as e:
-        return respond(f"Hata oluştu:\n{str(e)}")
+        return respond(f"❌ Hata oluştu:\n{str(e)}")
 
 @app.route("/check", methods=["GET"])
 def check_reminders():
     due_reminders = get_due_reminders(grace_minutes=5)
+    sent_count = 0
+
     for r in due_reminders:
-        twilio_client.messages.create(
-            body=f"🔔 Hatırlatma: {r['message']}",
-            from_=TWILIO_FROM,
-            to=r["phone"]
-        )
-    return {"status": "ok", "count": len(due_reminders)}, 200
+        try:
+            twilio_client.messages.create(
+                body=f"🔔 Hatırlatma: {r['message']}",
+                from_=TWILIO_FROM,
+                to=f"whatsapp:{r['phone']}"
+            )
+            sent_count += 1
+        except Exception as e:
+            print(f"[!] Hatırlatma gönderilemedi: {r['phone']} - {str(e)}")
+
+    return {"status": "ok", "count": sent_count}, 200
 
 def respond(message):
     return f"""<?xml version="1.0" encoding="UTF-8"?>
