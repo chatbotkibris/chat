@@ -5,8 +5,8 @@ from pathlib import Path
 
 ISTANBUL_TZ = pytz.timezone("Europe/Istanbul")
 db_path = Path(__file__).resolve().parent / "reminders_db.json"
+print("[DEBUG] DB dosya yolu:", db_path)  # 👈 BURAYI EKLE
 db = TinyDB(str(db_path))
-Reminder = Query()
 
 def add_reminder(phone_number, time_str, message, original_text):
     print("[DEBUG] add_reminder çağrıldı:", phone_number, time_str)
