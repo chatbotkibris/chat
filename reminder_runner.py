@@ -31,13 +31,14 @@ def main():
 
     while not token.cancel_now:
         print("[INFO] Checking reminders...")
-        due = get_due_reminders(grace_minutes=1)
+        due = get_due_reminders(grace_minutes=5)
         for r in due:
             send_reminder(r["phone"], r["message"])
             print(f"Sent reminder to {r['phone']} - {r['message']}")
-        time.sleep(60)
+        time.sleep(300)
 
     print("[INFO] Service shut down gracefully.")
 
 if __name__ == "__main__":
     main()
+
