@@ -5,9 +5,13 @@ from reminders import add_reminder, list_reminders_for_user, get_due_reminders
 from datetime import datetime
 import dateparser
 from twilio.rest import Client
+import pytz
 
 app = Flask(__name__)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Saat dilimi
+ISTANBUL_TZ = pytz.timezone("Europe/Istanbul")
 
 # Twilio ayarları
 TWILIO_SID = os.getenv("TWILIO_ACCOUNT_SID")
@@ -33,8 +37,20 @@ def whatsapp_webhook():
         )
         reply = response.choices[0].message.content.strip()
 
-        dt = dateparser.parse(incoming_msg, languages=["tr"])
-        if dt and dt > datetime.now():
+        # İstanbul saatine göre tarih çözümle
+        now_tr = datetime.now(ISTANBUL_TZ)
+        dt = dateparser.parse(
+            incoming_msg,
+            languages=["tr"],
+            settings={
+                'PREFER_DATES_FROM': 'future',
+                'RELATIVE_BASE': now_tr,
+                'TIMEZONE': 'Europe/Istanbul',
+                'RETURN_AS_TIMEZONE_AWARE': True
+            }
+        )
+
+        if dt and dt > now_tr:
             add_reminder(
                 phone_number=sender,
                 time_str=dt.isoformat(),
@@ -49,19 +65,16 @@ def whatsapp_webhook():
         return respond(f"Bir hata oluştu:\n{str(e)}")
 
 @app.route("/check", methods=["GET"])
-def check_reminders_route():  # 💡 Fonksiyon adı benzersiz olmalı
+def check_reminders():
     due_reminders = get_due_reminders(grace_minutes=5)
     for r in due_reminders:
         print(f"[HATIRLATICI] {r['phone']} için: {r['message']}")
-        try:
-            twilio_client.messages.create(
-                body=f"🔔 Hatırlatma: {r['message']}",
-                from_=TWILIO_FROM,
-                to=r["phone"]
-            )
-        except Exception as e:
-            print(f"Twilio gönderim hatası: {e}")
-    return {"status": "ok", "count": len(due_reminders)}, 200
+        twilio_client.messages.create(
+            body=f"🔔 Hatırlatma: {r['message']}",
+            from_=TWILIO_FROM,
+            to=r["phone"]
+        )
+    return {"status": "ok", "count": len(due_reminders)}
 
 def respond(message):
     return f"""<?xml version="1.0" encoding="UTF-8"?>
