@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta
 import json
 import os
+import pytz
 
 REMINDERS_FILE = "reminders.json"
+ISTANBUL_TZ = pytz.timezone("Europe/Istanbul")
 
 def load_reminders():
     if not os.path.exists(REMINDERS_FILE):
@@ -35,20 +37,24 @@ def list_reminders_for_user(phone_number):
         result += f"- {r['message']}\n"
     return result.strip()
 
-# 👇 BU KISMI EKLİYORSUN:
 def get_due_reminders(grace_minutes=5):
-    now = datetime.utcnow()
+    now = datetime.now(ISTANBUL_TZ)
     reminders = load_reminders()
     due = []
 
     for phone, items in reminders.items():
         new_items = []
         for r in items:
-            reminder_time = datetime.fromisoformat(r["time"])
-            if now >= reminder_time and now - reminder_time <= timedelta(minutes=grace_minutes):
-                due.append({"phone": phone, "message": r["message"]})
-            else:
-                new_items.append(r)
+            try:
+                reminder_time = datetime.fromisoformat(r["time"])
+                if reminder_time.tzinfo is None:
+                    reminder_time = ISTANBUL_TZ.localize(reminder_time)
+                if now >= reminder_time and now - reminder_time <= timedelta(minutes=grace_minutes):
+                    due.append({"phone": phone, "message": r["message"]})
+                else:
+                    new_items.append(r)
+            except Exception as e:
+                print(f"[HATA] Hatırlatma zamanı işlenemedi: {r['time']} - {str(e)}")
         reminders[phone] = new_items
 
     save_reminders(reminders)
